@@ -4,7 +4,7 @@ from django.http import HttpResponse
 
 # Create your views here.
 def index(request):
-    return HttpResponse("<h1>App is running...<h1>")
+    return HttpResponse("<h1>App isrunning...<h1>")
 
 def add(request):
     records = {
