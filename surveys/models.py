@@ -1,3 +1,5 @@
 from django.db import models
 
-# Create your models here.
+from db_connexion import db
+
+surveys_collection = db['surveys']
