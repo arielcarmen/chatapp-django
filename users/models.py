@@ -1,3 +1,4 @@
 from django.db import models
+from db_connexion import db
 
-# Create your models here.
+users_collection = db['users']
