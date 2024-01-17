@@ -1,3 +1,4 @@
 from django.db import models
+from db_connexion import db
 
-# Create your models here.
+contacts_collection = db['contacts']
