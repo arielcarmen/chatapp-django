@@ -26,8 +26,10 @@ def register(request):
         lastname = data['lastname']
         email = data['email']
         password = data['password']
-        user = user_manager.create_user(lastname, firstname, email, password)
-        return JsonResponse({"user": "successfully created"}, status=201)
+        result = user_manager.create_user(lastname, firstname, email, password)
+        user = users_collection.find_one(result.inserted_id)
+        user['_id'] = str(user['_id'])
+        return JsonResponse({"data": user}, status=201)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -39,7 +41,9 @@ def login(request):
         email = data['email']
         password = data['password']
         if user_manager.check_password(email, password):
+            user = user_manager.find_user_by_email(email= email)
             payload = {
+                'user_id': str(user['_id']),
                 'email': email,
                 'exp': datetime.utcnow() + timedelta(days=100),  # Le token expire après 100 jour
                 'iat': datetime.utcnow()
@@ -47,9 +51,10 @@ def login(request):
             token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
             user = user_manager.find_user_by_email(email= email)
+            user['_id'] = str(user['_id'])
             user.pop('password', None)
 
-            return JsonResponse({"token":token}, status=200)
+            return JsonResponse({"token":token, "user": user}, status=200)
         else:
             return JsonResponse({"error": "Invalid credentials."}, status=401)
     except Exception as e:
@@ -102,6 +107,7 @@ def reset_password(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@token_required
 def method(request):
     try:
         data = json.loads(request.body)

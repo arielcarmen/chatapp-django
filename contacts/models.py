@@ -1,6 +1,7 @@
 from django.db import models
 from db_connexion import db
 import time
+from bson import ObjectId
 
 contacts_collection = db['contacts']
 
@@ -18,3 +19,6 @@ class DBContactManager:
             "added_at" : time.time()
         }
         return self.collection.insert_one(contact_data)
+    
+    def find_by_id(self, id):
+        return self.collection.find_one(ObjectId(id))
