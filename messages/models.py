@@ -1,6 +1,7 @@
 from django.db import models
 from db_connexion import db
 import time
+from bson import ObjectId
 
 messages_collection = db['messages']
 
@@ -9,24 +10,18 @@ class DBMessageManager:
     def __init__(self):
         self.collection = messages_collection
 
-    def create_message(self, user2Id):
-        filename = ""
-        filetype = ""
-        filepath = ""
-        filesize = ""
+    def create_message(self, contactId, discussionId, respondToMsgId, text, file):
 
         message_data = {
-            "user1Id": "65cd2c9425f598db480f1639",
-            "discussionId": "tbd",
-            "text": user2Id,
-            "responseToMsgId": "65cd2c9425f598db480f1639",
+            "contactId": contactId,
+            "discussionId": discussionId,
+            "text": text,
+            "responseToMsgId": respondToMsgId,
             "created_at" : time.time(),
             "reactions" : [],
-            "file" : {
-                "name": filename,
-                "type": filetype,
-                "pathUrl": filepath,
-                "size": filesize
-            }
+            "file" : file
         }
         return self.collection.insert_one(message_data)
+    
+    def find_by_id(self, id):
+        return self.collection.find_one(ObjectId(id))

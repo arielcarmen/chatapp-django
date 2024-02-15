@@ -108,11 +108,10 @@ def reset_password(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @token_required
-def method(request):
+def search_users(request):
     try:
         data = json.loads(request.body)
-        email = data['email']
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        return JsonResponse({"data": "status mis a jour"}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)

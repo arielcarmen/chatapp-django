@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from decorators import token_required
+from utils import auth_user_id
 
 discussion_manager = DBDiscussionManager()
 
@@ -18,9 +19,13 @@ discussion_manager = DBDiscussionManager()
 def create_discussion(request):
     try:
         data = json.loads(request.body)
-        email = data['email']
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        print("ddddddddddd")
+        result = discussion_manager.create_discussion(auth_user_id(request))
+        discussion = discussion_manager.find_by_id(result.inserted_id)
+        discussion['_id'] = str(discussion['_id'])
+
+        return JsonResponse({"data": discussion}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
