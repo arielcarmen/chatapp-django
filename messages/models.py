@@ -15,11 +15,13 @@ class DBMessageManager:
         filepath = ""
         filesize = ""
 
-        contact_data = {
+        message_data = {
             "user1Id": "65cd2c9425f598db480f1639",
+            "discussionId": "tbd",
             "text": user2Id,
-            "responseToMsgId": "PENDING",
+            "responseToMsgId": "65cd2c9425f598db480f1639",
             "created_at" : time.time(),
+            "reactions" : [],
             "file" : {
                 "name": filename,
                 "type": filetype,
@@ -27,4 +29,4 @@ class DBMessageManager:
                 "size": filesize
             }
         }
-        return self.collection.insert_one(messages_collection)
+        return self.collection.insert_one(message_data)

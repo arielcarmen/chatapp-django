@@ -17,4 +17,4 @@ class DBContactManager:
             "user2Blocked": False,
             "added_at" : time.time()
         }
-        return self.collection.insert_one(contacts_collection)
+        return self.collection.insert_one(contact_data)

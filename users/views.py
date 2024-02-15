@@ -2,9 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from rest_framework.decorators import api_view
 from werkzeug.security import generate_password_hash
-from rest_framework_simplejwt.tokens import RefreshToken
 from .models import users_collection
 from django.http import HttpResponse
 from .models import DBUserManager
@@ -18,8 +16,6 @@ import os
 user_manager = DBUserManager()
 SECRET_KEY = os.environ.get('DJANGO_JWT_SECRET_KEY', 'votre_cle_secrete_par_defaut')
 
-def index(request):
-    return HttpResponse("<h1>App isrunning...<h1>")
 
 @csrf_exempt
 @require_http_methods(["POST"])

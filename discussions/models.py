@@ -1,5 +1,6 @@
 from django.db import models
 from db_connexion import db
+import time
 
 discussions_collection = db['discussions']
 
