@@ -16,4 +16,5 @@ urlpatterns = [
     path('<str:discussionId>/leave', view= views.leave_discussion),
     path('<str:discussionId>/delete', view= views.delete_group),
     path('<str:discussionId>', view= views.get_discussion),
+    path('<str:discussionId>/open', view= views.open_discussion),
 ]

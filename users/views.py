@@ -73,7 +73,24 @@ def online(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
+@csrf_exempt
+@require_http_methods(["GET"])
+@token_required
+def retrieve_infos(request):
+    try:
+        data = json.loads(request.body)
+        token = data['token']
 
+        token_data = jwt.decode(token, 'votre_cle_secrete_par_defaut', algorithms=['HS256'])
+        
+        user_id = token_data['user_id']
+        
+        user = user_manager.find_by_id(user_id)
+        user['_id'] = str(user['_id'])
+
+        return JsonResponse({"token": token, "user": user}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -86,18 +103,20 @@ def reset_password(request):
         new_password = data['newPassword']
 
         user = user_manager.find_user_by_email(email= email)
+        user["_id"] = str(user["_id"])
 
         if user_manager.check_password(email, old_password):
             hashed_password = generate_password_hash(new_password)
             users_collection.update_one({'email': email}, {'$set': {'password': hashed_password}})
             payload = {
+                'user_id': str(user['_id']),
                 'email': email,
                 'exp': datetime.utcnow() + timedelta(days=100),  # Le token expire après 100 jour
                 'iat': datetime.utcnow()
             }
             token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
-            return JsonResponse({"message": "Mot de passe mis a jour","token":token}, status=200)
+            return JsonResponse({"token":token,"data": user}, status=200)
         else:
             return JsonResponse({"error": "Invalid credentials."}, status=401)
 
@@ -106,12 +125,24 @@ def reset_password(request):
     
 
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["GET"])
 @token_required
 def search_users(request):
     try:
         data = json.loads(request.body)
+        text = data['text']
 
-        return JsonResponse({"data": "status mis a jour"}, status=200)
+        users = users_collection.find({
+            "$or": [
+                {"lastname": {"$regex": text, "$options": "i"}},
+                {"firstname": {"$regex": text, "$options": "i"}},
+                {"email": {"$regex": text, "$options": "i"}}
+            ]
+        }).limit(20).skip(0)
+
+        for user in users:
+            user["_id"] = str(user["_id"])
+
+        return JsonResponse({"data": users}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)

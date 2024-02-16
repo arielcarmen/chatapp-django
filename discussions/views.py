@@ -321,6 +321,10 @@ def delete_group(request,discussionId):
 def open_discussion(request,discussionId):
     try:
         discussion_manager.find_by_id(discussionId)
+        discussion = discussion_manager.find_by_id(discussionId)
+        discussion['_id'] = str(discussion['_id'])
+        for member in discussion['members']:
+            member['userId'] = str(member['userId'])
 
         for member in discussion['members']:
             if member['userId'] == ObjectId(auth_user_id(request)):
@@ -328,10 +332,6 @@ def open_discussion(request,discussionId):
                     {"_id": ObjectId(discussionId), "members.userId": ObjectId(auth_user_id(request))},
                     {"$set": {"members.$.hasNewNotif": True}}
                 )
-        discussion = discussion_manager.find_by_id(discussionId)
-        discussion['_id'] = str(discussion['_id'])
-        for member in discussion['members']:
-            member['userId'] = str(member['userId'])
 
         filter = {"_id": ObjectId(discussionId)}
         discussions_collection.delete_one(filter)

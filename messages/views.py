@@ -7,7 +7,7 @@ from decorators import token_required
 import json
 from utils import auth_user_id
 from bson import ObjectId
-from ..discussions.models import discussions_collection
+from discussions.models import discussions_collection
 
 message_manager = DBMessageManager()
 

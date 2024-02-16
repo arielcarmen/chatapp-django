@@ -2,6 +2,9 @@ import jwt
 import os
 from django.http import JsonResponse
 from functools import wraps
+from discussions.models import discussions_collection
+from bson import ObjectId
+from utils import auth_user_id
 
 
 
@@ -29,3 +32,19 @@ def token_required(f):
         return f(request, *args, **kwargs)
 
     return decorated_function
+
+
+def member_of_discussion(func):
+    @wraps(func)
+    def wrapper(request, *args, **kwargs):
+        discussion_id = kwargs.get('discussion_id')
+        user_id = auth_user_id(request)
+        try:
+            discussion = discussions_collection.find_one({"_id": ObjectId(discussion_id), "members.userId": user_id})
+            if discussion:
+                return func(request, *args, **kwargs)
+            else:
+                return JsonResponse({"error": "User is not a member of this discussion"}, status=403)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    return wrapper

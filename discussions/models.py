@@ -23,6 +23,7 @@ class DBDiscussionManager:
                     "userId": ObjectId(creator_id),
                     "isAdmin": True,
                     "isPinned": False,
+                    "hasNewNotif": False,
                     "isArchived": False,
                     "isMuted": False,
                     "added_at": time.time() 
@@ -40,6 +41,7 @@ class DBDiscussionManager:
             "userId": ObjectId(id),
             "isAdmin": False,
             "isPinned": False,
+            "hasNewNotif": False,
             "isArchived": False,
             "isMuted": False,
             "added_at": time.time() 
