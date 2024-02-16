@@ -6,7 +6,7 @@ from bson import ObjectId
 
 discussions_collection = db['discussions']
 
-actions = ["ADD_USERS_GROUP"]
+actions = ["ADD_USERS_GROUP","REMOVE_USERS_GROUP","UPDATE_GROUP_INFO","ARCHIVE","PIN","MUTE","LEAVE"]
 
 
 class DBDiscussionManager:

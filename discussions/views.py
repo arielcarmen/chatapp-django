@@ -84,7 +84,7 @@ def add_user_group(request, discussionId):
         action = data['action']
 
         if action not in actions:
-            return JsonResponse({"message": "Invalid action"}, status=400)
+            return JsonResponse({"error": "Invalid action"}, status=400)
         else:
             for id in members:
                 update = {"$push": {"members": discussion_manager.new_member(id)}}
@@ -92,6 +92,8 @@ def add_user_group(request, discussionId):
             
             discussion = discussion_manager.find_by_id(discussionId)
             discussion['_id'] = str(discussion['_id'])
+            for member in discussion['members']:
+                member['userId'] = str(member['userId'])
 
             return JsonResponse({"data": discussion}, status=200)
     except Exception as e:
@@ -100,95 +102,234 @@ def add_user_group(request, discussionId):
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @token_required
-def update_group(request):
+def update_group(request, discussionId):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        action = data['action']
+        name = data['name']
+        description = data['description']
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        if action not in actions:
+            return JsonResponse({"error": "Invalid action"}, status=400)
+        else:
+            filter = {"_id": ObjectId(discussionId)}
+            update = {"$set": {"description": description, "name": name}}
+            discussions_collection.update_one(filter, update)
+            discussion = discussion_manager.find_by_id(discussionId)
+            discussion['_id'] = str(discussion['_id'])
+            for member in discussion['members']:
+                member['userId'] = str(member['userId'])
+            
+            return JsonResponse({"data": discussion}, status=200)
+
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @token_required
-def pin_unpin_group(request):
+def pin_unpin_group(request, discussionId):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        action = data['action']
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        if action not in actions:
+            JsonResponse({"error": "Invalid action"}, status=400)
+        else:
+            discussion = discussion_manager.find_by_id(discussionId)
+
+            for member in discussion['members']:
+                if member['userId'] == ObjectId(auth_user_id(request)):
+                    isPinned = member.get('isPinned', False)
+
+                    isPinned = not isPinned
+
+                    discussions_collection.update_one(
+                        {"_id": ObjectId(discussionId), "members.userId": ObjectId(auth_user_id(request))},
+                        {"$set": {"members.$.isPinned": isPinned}}
+                    )
+
+                    discussion = discussion_manager.find_by_id(discussionId)
+                    discussion['_id'] = str(discussion['_id'])
+                    for member in discussion['members']:
+                        member['userId'] = str(member['userId'])
+                    
+                    return JsonResponse({"data": discussion}, status=200)
+                
+            return JsonResponse({"error": "Not in discussion !"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @token_required
-def archive_unarchive_discussion(request):
+def archive_unarchive_discussion(request, discussionId):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        action = data['action']
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        if action not in actions:
+            JsonResponse({"error": "Invalid action"}, status=400)
+        else:
+            discussion = discussion_manager.find_by_id(discussionId)
+
+            for member in discussion['members']:
+                if member['userId'] == ObjectId(auth_user_id(request)):
+                    isArchived = member.get('isArchived')
+                    isArchived = not isArchived
+
+                    discussions_collection.update_one(
+                        {"_id": ObjectId(discussionId), "members.userId": ObjectId(auth_user_id(request))},
+                        {"$set": {"members.$.isArchived": isArchived}}
+                    )
+
+                    discussion = discussion_manager.find_by_id(discussionId)
+                    discussion['_id'] = str(discussion['_id'])
+                    for member in discussion['members']:
+                        member['userId'] = str(member['userId'])
+                    
+                    return JsonResponse({"data": discussion}, status=200)
+                
+            return JsonResponse({"error": "Not in discussion !"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @token_required
-def mute_unmute_discussion(request):
+def mute_unmute_discussion(request, discussionId):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        action = data['action']
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        if action not in actions:
+            JsonResponse({"error": "Invalid action"}, status=400)
+        else:
+            discussion = discussion_manager.find_by_id(discussionId)
+
+            for member in discussion['members']:
+                if member['userId'] == ObjectId(auth_user_id(request)):
+                    isMuted = member.get('isMuted')
+                    isMuted = not isMuted
+
+                    discussions_collection.update_one(
+                        {"_id": ObjectId(discussionId), "members.userId": ObjectId(auth_user_id(request))},
+                        {"$set": {"members.$.isMuted": isMuted}}
+                    )
+
+                    discussion = discussion_manager.find_by_id(discussionId)
+                    discussion['_id'] = str(discussion['_id'])
+                    for member in discussion['members']:
+                        member['userId'] = str(member['userId'])
+                    
+                    return JsonResponse({"data": discussion}, status=200)
+                
+            return JsonResponse({"error": "Not in discussion !"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @token_required
-def remove_user_group(request):
+def remove_user_group(request, discussionId):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        filter = {"_id": ObjectId(discussionId)}
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        members = data['members']
+        action = data['action']
+
+        if action not in actions:
+            return JsonResponse({"error": "Invalid action"}, status=400)
+        else:
+            for id in members:
+                update = {"$pull": {"members": {"userId": ObjectId(id)}}}
+                discussions_collection.update_one(filter, update)
+            
+            discussion = discussion_manager.find_by_id(discussionId)
+            discussion['_id'] = str(discussion['_id'])
+            for member in discussion['members']:
+                member['userId'] = str(member['userId'])
+
+            return JsonResponse({"data": discussion}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @token_required
-def leave_discussion(request):
+def leave_discussion(request, discussionId):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        filter = {"_id": ObjectId(discussionId)}
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        action = data['action']
+
+        if action not in actions:
+            return JsonResponse({"error": "Invalid action"}, status=400)
+        else:
+            update = {"$pull": {"members": {"userId": ObjectId(auth_user_id(request))}}}
+            discussions_collection.update_one(filter, update)
+            
+            discussion = discussion_manager.find_by_id(discussionId)
+            discussion['_id'] = str(discussion['_id'])
+            for member in discussion['members']:
+                member['userId'] = str(member['userId'])
+
+            return JsonResponse({"data": discussion}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
 @csrf_exempt
-@require_http_methods(["PATCH"])
+@require_http_methods(["GET"])
 @token_required
-def open_discussion(request):
+def get_discussion(request, discussionId):
     try:
-        data = json.loads(request.body)
-        email = data['email']
+        discussion_manager.find_by_id(discussionId)
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        discussion = discussion_manager.find_by_id(discussionId)
+        discussion['_id'] = str(discussion['_id'])
+        for member in discussion['members']:
+            member['userId'] = str(member['userId'])
+
+        return JsonResponse({"data": discussion}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
 @csrf_exempt
 @require_http_methods(["DELETE"])
 @token_required
-def delete_group(request):
+def delete_group(request,discussionId):
     try:
-        data = json.loads(request.body)
-        email = data['email']
+        discussion_manager.find_by_id(discussionId)
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        discussion = discussion_manager.find_by_id(discussionId)
+        discussion['_id'] = str(discussion['_id'])
+        for member in discussion['members']:
+            member['userId'] = str(member['userId'])
+
+        filter = {"_id": ObjectId(discussionId)}
+        discussions_collection.delete_one(filter)
+
+        return JsonResponse({"data": discussion}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    
+@csrf_exempt
+@require_http_methods(["PATCH"])
+@token_required
+def open_discussion(request,discussionId):
+    try:
+        discussion_manager.find_by_id(discussionId)
+
+        discussion = discussion_manager.find_by_id(discussionId)
+        discussion['_id'] = str(discussion['_id'])
+        for member in discussion['members']:
+            member['userId'] = str(member['userId'])
+
+        filter = {"_id": ObjectId(discussionId)}
+        discussions_collection.delete_one(filter)
+
+        return JsonResponse({"data": discussion}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
