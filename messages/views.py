@@ -5,6 +5,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from decorators import token_required
 import json
+from utils import auth_user_id
+from bson import ObjectId
 
 message_manager = DBMessageManager()
 
@@ -42,12 +44,29 @@ def create_message(request):
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @token_required
-def react_to_message(request):
+def react_to_message(request, messageId):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        emoji = data['emoji']
+        action = data['action']
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        if action != "EMOJI_REACTION":
+            return JsonResponse({"error": "invalid action"}, status=400)
+        else:
+            filter = {"_id": ObjectId(messageId)}
+
+            reaction = {
+                "emoji": emoji,
+                "userId": auth_user_id(request)
+            }
+
+            update = {"$set": {"reactions": [reaction]}}
+            messages_collection.update_one(filter, update)
+            
+            message = message_manager.find_by_id(messageId)
+            message['_id'] = str(message['_id'])
+
+            return JsonResponse({"data": message}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
@@ -65,7 +84,9 @@ def discussion_messages(request):
         query = {"discussionId": discussion_id}
         sort = [("createdAt", sort_order)]  
         messages = list(messages_collection.find(query).sort(sort).limit(limit))
+        for message in messages:
+            message['_id'] = str(message['_id'])
 
-        return JsonResponse({"message": messages}, status=200)
+        return JsonResponse({"data": messages}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
