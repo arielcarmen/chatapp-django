@@ -13,22 +13,27 @@ message_manager = DBMessageManager()
 @token_required
 def create_message(request):
     try:
-        data = json.loads(request.body)
         
         discussionId = request.POST.get('discussionId', None)
         contactId = request.POST.get('contactId', None)
-        respondToMsgId = request.POST.get('respondToMsgId', None)
+        respondToMsgId = request.POST.get('responseToMsgId', None)
         text = request.POST.get('text', None)
-
-        file = request.FILES['file']
+        file = request.FILES.get('file', None)
         if file:
-            with open('/messages/uploads/', 'wb+') as destination:
+            file_info = {
+                'name': file.name,
+                'content_type': file.content_type,
+                'size': file.size,
+                'type' : file.content_type
+            }
+            with open('messages/uploads/'+file.name, 'wb+') as destination:
                 for chunk in file.chunks():
                     destination.write(chunk)
         
-        result = message_manager.create_message(discussionId= discussionId, contactId= contactId, text=text, file= file, respondToMsgId= respondToMsgId)
+        result = message_manager.create_message(discussionId= discussionId, contactId= contactId, text=text, file= file_info, respondToMsgId= respondToMsgId)
 
         message = message_manager.find_by_id(result.inserted_id)
+        message['_id'] = str(message['_id'])
         return JsonResponse({"data": message}, status=200)
     
     except Exception as e:
