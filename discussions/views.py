@@ -322,6 +322,12 @@ def open_discussion(request,discussionId):
     try:
         discussion_manager.find_by_id(discussionId)
 
+        for member in discussion['members']:
+            if member['userId'] == ObjectId(auth_user_id(request)):
+                discussions_collection.update_one(
+                    {"_id": ObjectId(discussionId), "members.userId": ObjectId(auth_user_id(request))},
+                    {"$set": {"members.$.hasNewNotif": True}}
+                )
         discussion = discussion_manager.find_by_id(discussionId)
         discussion['_id'] = str(discussion['_id'])
         for member in discussion['members']:

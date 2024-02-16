@@ -7,6 +7,7 @@ from decorators import token_required
 import json
 from utils import auth_user_id
 from bson import ObjectId
+from ..discussions.models import discussions_collection
 
 message_manager = DBMessageManager()
 
@@ -15,7 +16,6 @@ message_manager = DBMessageManager()
 @token_required
 def create_message(request):
     try:
-        
         discussionId = request.POST.get('discussionId', None)
         contactId = request.POST.get('contactId', None)
         respondToMsgId = request.POST.get('responseToMsgId', None)
@@ -34,8 +34,17 @@ def create_message(request):
         
         result = message_manager.create_message(discussionId= discussionId, contactId= contactId, text=text, file= file_info, respondToMsgId= respondToMsgId)
 
+        discussion = discussions_collection.find_one({"_id": ObjectId(discussionId)})
+        for member in discussion['members']:
+                if member['userId'] != ObjectId(auth_user_id(request)):
+                    discussions_collection.update_one(
+                        {"_id": ObjectId(discussionId), "members.userId": ObjectId(member['userId'])},
+                        {"$set": {"members.$.hasNewNotif": True}}
+                    )
+
         message = message_manager.find_by_id(result.inserted_id)
         message['_id'] = str(message['_id'])
+
         return JsonResponse({"data": message}, status=200)
     
     except Exception as e:
