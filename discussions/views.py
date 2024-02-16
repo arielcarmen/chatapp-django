@@ -1,8 +1,7 @@
 from django.shortcuts import render
 from .models import discussions_collection
 from django.http import HttpResponse
-from .models import discussions_collection
-from .models import DBDiscussionManager
+from .models import discussions_collection, DBDiscussionManager, actions
 import json
 from django.http import JsonResponse
 from django.http import JsonResponse
@@ -10,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from decorators import token_required
 from utils import auth_user_id
+from bson import ObjectId
 
 discussion_manager = DBDiscussionManager()
 
@@ -19,8 +19,6 @@ discussion_manager = DBDiscussionManager()
 def create_discussion(request):
     try:
         data = json.loads(request.body)
-
-        print("ddddddddddd")
         result = discussion_manager.create_discussion(auth_user_id(request))
         discussion = discussion_manager.find_by_id(result.inserted_id)
         discussion['_id'] = str(discussion['_id'])
@@ -35,9 +33,12 @@ def create_discussion(request):
 def discussions(request):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        filter = {"members.userId": ObjectId(auth_user_id(request))}
+        discussions = list(discussions_collection.find(filter))
+        for discussion in discussions:
+            discussion['_id'] = str(discussion['_id'])
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        return JsonResponse({"data": discussions}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
@@ -47,9 +48,12 @@ def discussions(request):
 def archived_discussions(request):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        filter = {"members.userId": ObjectId(auth_user_id(request)), "members.isArchived" : True}
+        discussions = list(discussions_collection.find(filter))
+        for discussion in discussions:
+            discussion['_id'] = str(discussion['_id'])
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        return JsonResponse({"data": discussions}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
@@ -59,21 +63,37 @@ def archived_discussions(request):
 def pinned_discussions(request):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        filter = {"members.userId": ObjectId(auth_user_id(request)), "members.isPinned" : True}
+        discussions = list(discussions_collection.find(filter))
+        for discussion in discussions:
+            discussion['_id'] = str(discussion['_id'])
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        return JsonResponse({"data": discussions}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
 @csrf_exempt
 @require_http_methods(["PATCH"])
 @token_required
-def add_user_group(request):
+def add_user_group(request, discussionId):
     try:
         data = json.loads(request.body)
-        email = data['email']
+        filter = {"_id": ObjectId(discussionId)}
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        members = data['members']
+        action = data['action']
+
+        if action not in actions:
+            return JsonResponse({"message": "Invalid action"}, status=400)
+        else:
+            for id in members:
+                update = {"$push": {"members": discussion_manager.new_member(id)}}
+                discussions_collection.update_one(filter, update)
+            
+            discussion = discussion_manager.find_by_id(discussionId)
+            discussion['_id'] = str(discussion['_id'])
+
+            return JsonResponse({"data": discussion}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     

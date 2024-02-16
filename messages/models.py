@@ -19,7 +19,7 @@ class DBMessageManager:
             "responseToMsgId": respondToMsgId,
             "created_at" : time.time(),
             "reactions" : [],
-            "file" : file
+            "file" : file,
         }
         return self.collection.insert_one(message_data)
     

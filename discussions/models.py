@@ -6,6 +6,8 @@ from bson import ObjectId
 
 discussions_collection = db['discussions']
 
+actions = ["ADD_USERS_GROUP"]
+
 
 class DBDiscussionManager:
     def __init__(self):
@@ -18,8 +20,12 @@ class DBDiscussionManager:
             "description": "description group",
             "members" : [
                 {
-                    "userId": creator_id,
-                    "isAdmin": True
+                    "userId": ObjectId(creator_id),
+                    "isAdmin": True,
+                    "isPinned": False,
+                    "isArchived": False,
+                    "isMuted": False,
+                    "added_at": time.time() 
                 },
             ]
 
@@ -28,3 +34,13 @@ class DBDiscussionManager:
     
     def find_by_id(self, id):
         return self.collection.find_one(ObjectId(id))
+    
+    def new_member(self, id):
+        return {
+            "userId": ObjectId(id),
+            "isAdmin": False,
+            "isPinned": False,
+            "isArchived": False,
+            "isMuted": False,
+            "added_at": time.time() 
+        }

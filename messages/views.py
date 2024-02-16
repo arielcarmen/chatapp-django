@@ -60,7 +60,7 @@ def react_to_message(request, messageId):
                 "userId": auth_user_id(request)
             }
 
-            update = {"$set": {"reactions": [reaction]}}
+            update = {"$push": {"reactions": reaction}}
             messages_collection.update_one(filter, update)
             
             message = message_manager.find_by_id(messageId)
