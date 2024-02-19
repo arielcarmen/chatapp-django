@@ -11,7 +11,8 @@ from datetime import timedelta, datetime
 import jwt
 from decorators import token_required
 import os
-
+from bson import ObjectId
+from utils import auth_user_id
 
 user_manager = DBUserManager()
 SECRET_KEY = os.environ.get('DJANGO_JWT_SECRET_KEY', 'votre_cle_secrete_par_defaut')
@@ -26,6 +27,29 @@ def register(request):
         lastname = data['lastname']
         email = data['email']
         password = data['password']
+        errors = []
+
+        if users_collection.find_one({"email": email}):
+            errors.append("Cet e-mail est déjà utilisé.")
+
+        if not any(char.isupper() for char in password):
+            errors.append("Le mot de passe doit contenir au moins une majuscule.")
+
+        if not any(char.islower() for char in password):
+            errors.append("Le mot de passe doit contenir au moins une minuscule.")
+
+        if not any(char.isdigit() for char in password):
+            errors.append("Le mot de passe doit contenir au moins un chiffre.")
+
+        if not any(char in r"@#$%_&!*?" for char in password):
+            errors.append("Le mot de passe doit contenir au moins un caractère spécial (@#$%&!*?).")
+
+        if len(password) < 8:
+            errors.append("Le mot de passe doit faire au moins 8 caractères de long.")
+
+        if errors:
+            return JsonResponse({"error": errors}, status=400)
+        
         result = user_manager.create_user(lastname, firstname, email, password)
         user = users_collection.find_one(result.inserted_id)
         user['_id'] = str(user['_id'])
@@ -68,8 +92,32 @@ def online(request):
         data = json.loads(request.body)
         email = data['email']
         users_collection.update_one({'email': email}, {'$set': {'status': 'En ligne'}})
+        user = user_manager.find_user_by_email(email)
+        user['_id'] = str(user['_id'])
+        user.pop('password', None)
 
-        return JsonResponse({"message": "status mis a jour"}, status=200)
+        return JsonResponse({"data": user}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    
+@csrf_exempt
+@require_http_methods(["PATCH"])
+@token_required
+def update(request):
+    try:
+        data = json.loads(request.body)
+        firstname = data['firstname']
+        lastname = data['lastname']
+        email = data['email']
+        photoUrl = data['photoUrl']
+        users_collection.update_one({'_id': ObjectId(auth_user_id)}, 
+        {'$set': {'firstname': firstname, 'lastname': lastname, 'photoUrl': photoUrl, 'status': 'En ligne'}}
+            )
+        user = user_manager.find_user_by_email(email)
+        user['_id'] = str(user['_id'])
+        user.pop('password', None)
+
+        return JsonResponse({"data": user}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
     
@@ -81,12 +129,13 @@ def retrieve_infos(request):
         data = json.loads(request.body)
         token = data['token']
 
-        token_data = jwt.decode(token, 'votre_cle_secrete_par_defaut', algorithms=['HS256'])
+        token_data = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
         
         user_id = token_data['user_id']
         
         user = user_manager.find_by_id(user_id)
         user['_id'] = str(user['_id'])
+        user.pop('password', None)
 
         return JsonResponse({"token": token, "user": user}, status=200)
     except Exception as e:
@@ -111,10 +160,11 @@ def reset_password(request):
             payload = {
                 'user_id': str(user['_id']),
                 'email': email,
-                'exp': datetime.utcnow() + timedelta(days=100),  # Le token expire après 100 jour
+                'exp': datetime.utcnow() + timedelta(days=100),  # token valide 100jours
                 'iat': datetime.utcnow()
             }
             token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+            user.pop('password', None)
 
             return JsonResponse({"token":token,"data": user}, status=200)
         else:
@@ -132,13 +182,13 @@ def search_users(request):
         data = json.loads(request.body)
         text = data['text']
 
-        users = users_collection.find({
+        users = list(users_collection.find({
             "$or": [
                 {"lastname": {"$regex": text, "$options": "i"}},
                 {"firstname": {"$regex": text, "$options": "i"}},
                 {"email": {"$regex": text, "$options": "i"}}
             ]
-        }).limit(20).skip(0)
+        }).limit(20).skip(0))
 
         for user in users:
             user["_id"] = str(user["_id"])
